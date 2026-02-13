@@ -16,7 +16,7 @@ def main(page: ft.Page):
             ft.TextButton("Entendido", on_click = lambda e: close_alert(page, alert)),
         ],
     )
-    #Lembrar - Aprendizado: Colcoar ele na lista suspensa apenas uma vez
+    #Lembrar - Aprendizado: Colocar ele na lista suspensa apenas uma vez
     page.overlay.append(alert)
     
     title = ft.Text("Metas", size=30, color="white" )
@@ -24,10 +24,23 @@ def main(page: ft.Page):
     meta_list = ft.Column(horizontal_alignment = ft.CrossAxisAlignment.CENTER)
     button = ft.FilledButton("Insert", on_click = lambda e: add_goal(page, new_goal, meta_list, alert))
 
+    # meta seguindo, permitir que o usuario adicione tags
+    # drop_down_list = ft.Dropdown(
+    #     label = "Escolha uma tag",
+    #     hint_text ="Selecione o grupo",
+    #     options=[
+    #         ft.dropdown.Option("Lazer"),
+    #         ft.dropdown.Option("Trabalho"),
+    #         ft.dropdown.Option("Educação"),
+    #     ],
+    #     width=300,
+    # )
+
+
     page.add(title, 
              new_goal, 
              button,
-             meta_list,)
+             meta_list)
     
 if __name__ == "__main__":
     ft.run(main)
