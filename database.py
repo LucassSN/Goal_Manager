@@ -10,7 +10,8 @@ class Database:
         self.cursor.execute("""
     CREATE TABLE IF NOT EXISTS goal(
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            title TEXT NOT NULL
+                            title TEXT NOT NULL,
+                            status INTEGER DEFAULT 0
                             )
                             """)
         self.conn.commit()
@@ -22,17 +23,23 @@ class Database:
         print("meta adicionada com sucesso!")
         return self.cursor.lastrowid
         
-    
-    def get_goals(self):
+
+    def load_goals(self):
         self.cursor.execute("SELECT * FROM goal")
-        return self.cursor.fetchall()
+        data = self.cursor.fetchall()
         print("arquivo db lido com sucesso!")
+        return data
         
+
     
     def  delete_db_goal(self, goal_id):
-        self.cursor.execute("DELETE FORM goal WHERE id = ?", (goal_id,))
+        self.cursor.execute("DELETE FROM goal WHERE id = ?", (goal_id,))
         self.conn.commit()
         print("arquivo db exluido com sucesso!")
+    
+    def update_status(self, goal_id, status):
+        self.cursor.execute("UPDATE goal SET status =? WHERE id = ?", (status, goal_id))
+        self.conn.commit()
 
     
 
