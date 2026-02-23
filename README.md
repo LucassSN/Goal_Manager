@@ -1,8 +1,7 @@
 # ✅ Goal Manager
-Um gerenciador de metas minimalista desenvolvido com Python e Flet, focado em uma experiência visual limpa e sincronização de dados eficiente. Este projeto faz parte dos meus estudos sobre interfaces ricas e persistência de dados local.
+Um gerenciador de metas desenvolvido com Python e Flet, focado em uma experiência visual limpa e sincronização de dados eficiente. Este projeto faz parte dos meus estudos sobre interfaces ricas e persistência de dados local.
 
 ## 🚀 Funcionalidades
-Design Minimalista: Interface em preto e branco com bordas sutis.
 
 - Persistência em SQLite: Suas metas são salvas em um banco de dados local (goal.db).
 
