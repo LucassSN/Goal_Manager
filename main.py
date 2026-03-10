@@ -6,10 +6,10 @@ db = Database()
 
 def main(page: ft.Page):
     page.title = "Gerenciador de Meta"
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.bgcolor = page.bgcolor = "black"
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.vertical_alignment = "center"
+    page.horizontal_alignment = "center"
+    page.bgcolor = "black"
+    page.theme_mode = "light"
     page.padding = 40
 
     
@@ -36,31 +36,74 @@ def main(page: ft.Page):
             )
             
         ],
-        actions_alignment=ft.MainAxisAlignment.END
+        actions_alignment="end"
         
         
     )
     #Lembrar - Aprendizado: Colocar ele na lista suspensa apenas uma vez
     page.overlay.append(alert)
     
-    title = ft.Text("Metas", size=30, color="white" )
-    new_goal = ft.TextField(label = "Digite sua nova meta", width=300, on_submit = lambda e: add_goal(page, new_goal, meta_list, alert), color = "white")
-    meta_list = ft.Column(horizontal_alignment = ft.CrossAxisAlignment.CENTER,expand = True, spacing = 10, scroll = ft.ScrollMode.ADAPTIVE)
-    button = ft.FilledButton("Insert", on_click = lambda e: add_goal(page, new_goal, meta_list, alert), color = "white")
+    # Estado local para o modo de visualização
+    current_view = ["list"]
 
+    def toggle_view(e):
+        if current_view[0] == "list":
+            current_view[0] = "grid"
+            view_button.icon = ft.Icons.LIST
+            view_button.tooltip = "Mudar para Modo Lista"
+        else:
+            current_view[0] = "list"
+            view_button.icon = ft.Icons.GRID_VIEW
+            view_button.tooltip = "Mudar para Modo Card"
+        
+        load_initial_data(meta_list, page, current_view)
+        page.update()
+
+    # Botão de alternância na AppBar
+    view_button = ft.IconButton(
+        icon=ft.Icons.GRID_VIEW,
+        tooltip="Mudar para Modo Card",
+        icon_color="white",
+        on_click=toggle_view
+    )
+
+    page.appbar = ft.AppBar(
+        title=ft.Text("Gerenciador de Metas", color="white", weight="bold"),
+        center_title=True,
+        bgcolor="black",
+        actions=[view_button],
+    )
+
+    new_goal = ft.TextField(
+        label="Digite sua nova meta", 
+        width=300, 
+        on_submit=lambda e: add_goal(page, new_goal, meta_list, alert, current_view), 
+        color="white",
+        border_color="white"
+    )
     
+    # O container principal agora será dinâmico
+    meta_list = ft.Column(
+        scroll="adaptive",
+        expand=True,
+        horizontal_alignment="center"
+    )
 
-    load_initial_data(meta_list, page)
+    button = ft.FilledButton("Insert", on_click = lambda e: add_goal(page, new_goal, meta_list, alert, current_view), color = "white")
 
-    start_monitor(page, meta_list, db)
+    load_initial_data(meta_list, page, current_view)
 
-    page.add(title,
-             ft.Row(
-                 controls = [new_goal, button],
-                 alignment=ft.MainAxisAlignment.CENTER,
-                 spacing = 10
-             ),
-             meta_list)
+    start_monitor(page, meta_list, db, current_view)
+
+    page.add(
+        ft.Row(
+            controls = [new_goal, button],
+            alignment="center",
+            spacing = 10
+        ),
+        ft.Divider(color="white", height=20),
+        ft.Container(content=meta_list, expand=True, padding=10)
+    )
     
 if __name__ == "__main__":
     ft.run(main)
