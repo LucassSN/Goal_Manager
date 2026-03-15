@@ -7,7 +7,7 @@ db = Database()
 
 
 class ItemGoal(ft.Container):
-    def __init__(self, text, remove_func, goal_id, db, status=0, view_mode="list"):
+    def __init__(self, text, remove_func, goal_id, db, page, status=0, view_mode="list"):
         super().__init__()
         self.db = db
         self.goal_id = goal_id
@@ -29,6 +29,7 @@ class ItemGoal(ft.Container):
             
         self.bgcolor = "black"
         self.border = ft.border.all(1, "white")
+        self.on_click = lambda _: page.go(f"/tasks/{self.goal_id}")
         
         self.checkbox = ft.Checkbox(
             value=True if status == 1 else False,
@@ -125,6 +126,7 @@ def add_goal(page, new_goal, meta_list, alert, current_view):
                             remove_func=lambda card: delete_goal_action(page, meta_list, card, current_view), 
                             goal_id = goal_id,
                             db = db,
+                            page = page,
                             view_mode=current_view[0]
                             )
         
@@ -160,6 +162,7 @@ def load_initial_data(meta_list, page, current_view):
                         remove_func=lambda card: delete_goal_action(page, meta_list, card, current_view), 
                         goal_id=g[0],
                         db = db,
+                        page = page,
                         status = g[2],
                         view_mode=current_view[0]
                         )
@@ -174,21 +177,143 @@ def close_alert(page, alert):
 
 last_check_hash = None
 
-def start_monitor(page, meta_list, db, current_view):
+def start_monitor(page, db, current_view):
     def check_database():
         global last_check_hash 
         while True:
-            goals_data = db.load_goals()
+            # Obtém referências dinâmicas baseadas na rota atual
+            try:
+                current_route = page.route
+                # Se estiver na Home, monitora Metas
+                if current_route == "/":
+                    goals_data = db.load_goals()
+                    current_hash = str(goals_data)
+                    if current_hash != last_check_hash:
+                        # Busca o meta_list pela key com segurança
+                        target_meta_list = None
+                        for view in page.views:
+                            if view.route == "/":
+                                for control in view.controls:
+                                    if hasattr(control, "content") and hasattr(control.content, "controls"):
+                                        res = control.content.controls
+                                        target_meta_list = next((c for c in res if getattr(c, "key", None) == "meta_list"), None)
+                                        if target_meta_list:
+                                            break
+                        
+                        if target_meta_list:
+                            load_initial_data(target_meta_list, page, current_view)
+                            last_check_hash = current_hash
+                
+                # Se estiver em Tasks, monitora Sub-tarefas
+                elif current_route.startswith("/tasks/"):
+                    goal_id = current_route.split("/")[-1]
+                    tasks_data = db.load_tasks(goal_id)
+                    current_hash = f"tasks_{goal_id}_{str(tasks_data)}"
+                    if current_hash != last_check_hash:
+                        target_task_list = None
+                        for view in page.views:
+                            if view.route.startswith("/tasks/"):
+                                for control in view.controls:
+                                    if hasattr(control, "content") and hasattr(control.content, "controls"):
+                                        res = control.content.controls
+                                        target_task_list = next((c for c in res if getattr(c, "key", None) == "task_list"), None)
+                                        if target_task_list:
+                                            break
+                        
+                        if target_task_list:
+                            load_tasks_view(page, target_task_list, goal_id)
+                            last_check_hash = current_hash
+                
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"Erro no monitor: {e}")
+                time.sleep(1)
 
-            current_hash = str(goals_data)
-
-            if current_hash != last_check_hash:
-                load_initial_data(meta_list, page, current_view)
-                last_check_hash = current_hash
-                print("Sincronização em background concluída.")
-            time.sleep(0.5) # Muito mais rápido agora
     thread = threading.Thread(target=check_database, daemon=True)
     thread.start()
 
 
+# --- NOVAS CLASSES E FUNÇÕES PARA TASKS ---
 
+class TaskItem(ft.Container):
+    def __init__(self, text, task_id, goal_id, db, status=0):
+        super().__init__()
+        self.db = db
+        self.task_id = task_id
+        self.goal_id = goal_id
+        
+        self.padding = 10
+        self.bgcolor = "#1a1a1a"
+        self.border_radius = 10
+        self.border = ft.border.all(1, "white")
+        
+        # Usando Radio para o status conforme solicitado
+        # Cada task terá seu próprio RadioGroup para agir isoladamente
+        self.status_radio = ft.Radio(
+            value="done", 
+            label="", 
+            fill_color="white"
+        )
+        
+        self.radio_group = ft.RadioGroup(
+            content=self.status_radio,
+            value="done" if status == 1 else None,
+            on_change=self.toggle_status
+        )
+
+        self.display_text = ft.Text(
+            text, 
+            color="white", 
+            size=16, 
+            expand=True, 
+            style=ft.TextStyle(decoration=ft.TextDecoration.LINE_THROUGH if status == 1 else "none")
+        )
+
+        self.content = ft.Row(
+            controls=[
+                self.radio_group,
+                self.display_text,
+                ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="red", on_click=self.delete_task)
+            ]
+        )
+
+    def toggle_status(self, e):
+        # Se selecionado, status = 1. Como é um RadioGroup de um único item, 
+        # para desmarcar o usuário teria que clicar no banco ou resetar.
+        # Mas para tasks, vamos permitir alternar.
+        status_int = 1 # Se o evento disparou no RadioGroup de um item, é pq marcou
+        self.db.update_task_status(self.task_id, status_int)
+        
+        global last_check_hash
+        last_check_hash = "update_internal"
+        
+        self.display_text.style.decoration = ft.TextDecoration.LINE_THROUGH
+        self.update()
+
+    def delete_task(self, e):
+        self.db.delete_task(self.task_id)
+        # Força recarga via monitor
+        global last_check_hash
+        last_check_hash = "force_reload"
+
+def load_tasks_view(page, meta_list, goal_id):
+    meta_list.controls.clear()
+    tasks_data = db.load_tasks(goal_id)
+    
+    view_container = ft.ListView(expand=True, spacing=10, padding=10)
+    
+    for t in tasks_data:
+        task_card = TaskItem(text=t[2], task_id=t[0], goal_id=t[1], db=db, status=t[3])
+        view_container.controls.append(task_card)
+        
+    meta_list.controls.append(view_container)
+    page.update()
+
+def add_task_action(page, meta_list, goal_id, field):
+    if field.value:
+        db.add_task(goal_id, field.value)
+        field.value = ""
+        load_tasks_view(page, meta_list, goal_id)
+        # Atualiza hash
+        global last_check_hash
+        last_check_hash = "force_reload"
