@@ -4,6 +4,7 @@ class Database:
     def __init__(self):
         self.conn = sqlite3.connect("goal.db",  check_same_thread = False)
         self.cursor = self.conn.cursor()
+        self.cursor.execute("PRAGMA foreign_keys = ON")
         self.create_table()
 
     def create_table(self):
@@ -26,30 +27,29 @@ class Database:
         )
         """)
         self.conn.commit()
-        print("banco de dados e tabelas criado com sucesso!")
 
     def add_goal(self, title):
         self.cursor.execute("INSERT INTO goal (title) VALUES (?)", (title,))
         self.conn.commit()
-        print("meta adicionada com sucesso!")
         return self.cursor.lastrowid
 
     def load_goals(self):
         self.cursor.execute("SELECT * FROM goal")
         data = self.cursor.fetchall()
-        print("arquivo db lido com sucesso!")
         return data
 
     def delete_db_goal(self, goal_id):
-        # O SQLite deve deletar as tasks automaticamente se configurado ou deletamos manualmente
-        self.cursor.execute("DELETE FROM tasks WHERE goal_id = ?", (goal_id,))
         self.cursor.execute("DELETE FROM goal WHERE id = ?", (goal_id,))
         self.conn.commit()
-        print("meta e suas tasks removidas com sucesso!")
 
     def update_status(self, goal_id, status):
         self.cursor.execute("UPDATE goal SET status =? WHERE id = ?", (status, goal_id))
         self.conn.commit()
+
+    def get_goal(self, goal_id):
+        self.cursor.execute("SELECT title FROM goal WHERE id = ?", (goal_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else "Meta Desconhecida"
 
     # --- MÉTODOS PARA TASKS ---
 

@@ -3,7 +3,7 @@ from database import Database
 import time
 import threading
 
-db = Database()
+
 
 
 class ItemGoal(ft.Container):
@@ -27,23 +27,21 @@ class ItemGoal(ft.Container):
             self.padding = 15 # Padding interno do card
             self.border_radius = 15
             
-        self.bgcolor = "black"
-        self.border = ft.border.all(1, "white")
+        self.bgcolor = "surfaceVariant"
+        self.border = ft.border.all(1, "outline")
         self.on_click = lambda _: page.go(f"/tasks/{self.goal_id}")
         
         self.checkbox = ft.Checkbox(
             value=True if status == 1 else False,
             on_change=self.card_status,
-            fill_color="white",
-            check_color="black",
-            border_side=ft.BorderSide(2, "white")
+            fill_color="primary"
         )
         
         self.display_text = ft.Text(
             value=text,
             size=18 if self.view_mode == "grid" else 16,
             weight="bold" if self.view_mode == "grid" else "normal",
-            color="white" if status == 0 else "gray",
+            color="onSurface" if status == 0 else "#A0A0A0",
             text_align="center",
             style=ft.TextStyle(
                 decoration=(ft.TextDecoration.LINE_THROUGH if status == 1 
@@ -53,7 +51,7 @@ class ItemGoal(ft.Container):
         
         self.trash_icon = ft.IconButton(
             icon=ft.Icons.DELETE_OUTLINE,
-            icon_color="white",
+            icon_color="error",
             tooltip="Excluir",
             on_click=lambda _: self.remove_func(self),
         )
@@ -98,13 +96,13 @@ class ItemGoal(ft.Container):
 
         if self.checkbox.value == True:
             self.display_text.style.decoration = ft.TextDecoration.LINE_THROUGH
-            self.display_text.color = "gray"
+            self.display_text.color = "#A0A0A0"
         else:
             self.display_text.style.decoration = ft.TextDecoration.NONE
-            self.display_text.color = "white"
+            self.display_text.color = "onSurface"
         self.update()
 
-def delete_goal_action(page, meta_list, card_to_remove, current_view):
+def delete_goal_action(page, db, meta_list, card_to_remove, current_view):
     db.delete_db_goal(card_to_remove.goal_id)
     
     # Atualiza o hash global imediatamente para o monitor não agir
@@ -112,9 +110,9 @@ def delete_goal_action(page, meta_list, card_to_remove, current_view):
     last_check_hash = str(db.load_goals())
     
     # Recarregamos para manter a interface limpa
-    load_initial_data(meta_list, page, current_view)
+    load_initial_data(db, meta_list, page, current_view)
 
-def add_goal(page, new_goal, meta_list, alert, current_view):
+def add_goal(page, db, new_goal, meta_list, alert, current_view):
     if new_goal.value:
         goal_id = db.add_goal(new_goal.value)
         
@@ -122,16 +120,8 @@ def add_goal(page, new_goal, meta_list, alert, current_view):
         global last_check_hash
         last_check_hash = str(db.load_goals())
 
-        new_card = ItemGoal(text = new_goal.value, 
-                            remove_func=lambda card: delete_goal_action(page, meta_list, card, current_view), 
-                            goal_id = goal_id,
-                            db = db,
-                            page = page,
-                            view_mode=current_view[0]
-                            )
-        
         # Em vez de append simples, recarregamos para garantir a ordenação correta e layout de Grid/List
-        load_initial_data(meta_list, page, current_view)
+        load_initial_data(db, meta_list, page, current_view)
         new_goal.value = ""
         page.update()
     else:
@@ -139,7 +129,7 @@ def add_goal(page, new_goal, meta_list, alert, current_view):
         page.update()
 
 
-def load_initial_data(meta_list, page, current_view):
+def load_initial_data(db, meta_list, page, current_view):
     # Limpamos o container principal
     meta_list.controls.clear()
     goals_data = db.load_goals()
@@ -159,7 +149,7 @@ def load_initial_data(meta_list, page, current_view):
 
     for g in goals_data:
         card = ItemGoal(text=g[1],
-                        remove_func=lambda card: delete_goal_action(page, meta_list, card, current_view), 
+                        remove_func=lambda card: delete_goal_action(page, db, meta_list, card, current_view), 
                         goal_id=g[0],
                         db = db,
                         page = page,
@@ -201,7 +191,7 @@ def start_monitor(page, db, current_view):
                                             break
                         
                         if target_meta_list:
-                            load_initial_data(target_meta_list, page, current_view)
+                            load_initial_data(db, target_meta_list, page, current_view)
                             last_check_hash = current_hash
                 
                 # Se estiver em Tasks, monitora Sub-tarefas
@@ -221,7 +211,7 @@ def start_monitor(page, db, current_view):
                                             break
                         
                         if target_task_list:
-                            load_tasks_view(page, target_task_list, goal_id)
+                            load_tasks_view(page, db, target_task_list, goal_id)
                             last_check_hash = current_hash
                 
                 time.sleep(0.5)
@@ -236,84 +226,88 @@ def start_monitor(page, db, current_view):
 # --- NOVAS CLASSES E FUNÇÕES PARA TASKS ---
 
 class TaskItem(ft.Container):
-    def __init__(self, text, task_id, goal_id, db, status=0):
+    def __init__(self, text, task_id, goal_id, db, page, meta_list, status=0):
         super().__init__()
         self.db = db
         self.task_id = task_id
         self.goal_id = goal_id
+        self.app_page = page
+        self.meta_list = meta_list
         
         self.padding = 10
-        self.bgcolor = "#1a1a1a"
+        self.bgcolor = "surfaceVariant"
         self.border_radius = 10
-        self.border = ft.border.all(1, "white")
+        self.border = ft.border.all(1, "outline")
         
-        # Usando Radio para o status conforme solicitado
-        # Cada task terá seu próprio RadioGroup para agir isoladamente
-        self.status_radio = ft.Radio(
-            value="done", 
-            label="", 
-            fill_color="white"
-        )
-        
-        self.radio_group = ft.RadioGroup(
-            content=self.status_radio,
-            value="done" if status == 1 else None,
-            on_change=self.toggle_status
+        self.checkbox = ft.Checkbox(
+            value=True if status == 1 else False,
+            on_change=self.toggle_status,
+            fill_color="primary"
         )
 
         self.display_text = ft.Text(
             text, 
-            color="white", 
+            color="#A0A0A0" if status == 1 else "onSurface", 
             size=16, 
             expand=True, 
-            style=ft.TextStyle(decoration=ft.TextDecoration.LINE_THROUGH if status == 1 else "none")
+            style=ft.TextStyle(decoration=ft.TextDecoration.LINE_THROUGH if status == 1 else ft.TextDecoration.NONE)
         )
 
         self.content = ft.Row(
             controls=[
-                self.radio_group,
+                self.checkbox,
                 self.display_text,
-                ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="red", on_click=self.delete_task)
+                ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="error", on_click=self.delete_task)
             ]
         )
 
     def toggle_status(self, e):
-        # Se selecionado, status = 1. Como é um RadioGroup de um único item, 
-        # para desmarcar o usuário teria que clicar no banco ou resetar.
-        # Mas para tasks, vamos permitir alternar.
-        status_int = 1 # Se o evento disparou no RadioGroup de um item, é pq marcou
+        status_int = 1 if self.checkbox.value else 0
         self.db.update_task_status(self.task_id, status_int)
         
+        # Atualiza a hash para o estado atualizado do BD, assim o monitor ignora a mudança
         global last_check_hash
-        last_check_hash = "update_internal"
+        last_check_hash = f"tasks_{self.goal_id}_{str(self.db.load_tasks(self.goal_id))}"
         
-        self.display_text.style.decoration = ft.TextDecoration.LINE_THROUGH
+        if self.checkbox.value == True:
+            self.display_text.style.decoration = ft.TextDecoration.LINE_THROUGH
+            self.display_text.color = "#A0A0A0"
+        else:
+            self.display_text.style.decoration = ft.TextDecoration.NONE
+            self.display_text.color = "onSurface"
         self.update()
 
     def delete_task(self, e):
         self.db.delete_task(self.task_id)
-        # Força recarga via monitor
+        
+        # Atualiza a hash em tempo real para o monitor não sobreescrever a interface
         global last_check_hash
-        last_check_hash = "force_reload"
+        last_check_hash = f"tasks_{self.goal_id}_{str(self.db.load_tasks(self.goal_id))}"
+        
+        # Recarrega a view de tasks instantaneamente local
+        load_tasks_view(self.app_page, self.db, self.meta_list, self.goal_id)
 
-def load_tasks_view(page, meta_list, goal_id):
+def load_tasks_view(page, db, meta_list, goal_id):
     meta_list.controls.clear()
     tasks_data = db.load_tasks(goal_id)
     
     view_container = ft.ListView(expand=True, spacing=10, padding=10)
     
     for t in tasks_data:
-        task_card = TaskItem(text=t[2], task_id=t[0], goal_id=t[1], db=db, status=t[3])
+        # Repassa page e meta_list para o TaskItem atualizar views localmente
+        task_card = TaskItem(text=t[2], task_id=t[0], goal_id=t[1], db=db, page=page, meta_list=meta_list, status=t[3])
         view_container.controls.append(task_card)
         
     meta_list.controls.append(view_container)
     page.update()
 
-def add_task_action(page, meta_list, goal_id, field):
+def add_task_action(page, db, meta_list, goal_id, field):
     if field.value:
         db.add_task(goal_id, field.value)
         field.value = ""
-        load_tasks_view(page, meta_list, goal_id)
-        # Atualiza hash
+        
+        # Atualiza a hash para o monitor ignorar a chamada para evitar flicker
         global last_check_hash
-        last_check_hash = "force_reload"
+        last_check_hash = f"tasks_{goal_id}_{str(db.load_tasks(goal_id))}"
+        
+        load_tasks_view(page, db, meta_list, goal_id)
