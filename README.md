@@ -1,33 +1,27 @@
-# ✅ Goal Manager
+# 📊 Goal Manager
+
 Um gerenciador de metas desenvolvido com Python e Flet, focado em uma experiência visual limpa e sincronização de dados eficiente. Este projeto faz parte dos meus estudos sobre interfaces ricas e persistência de dados local.
 
-## 🚀 Funcionalidades
+🚀 Funcionalidades
+- **Visualização Dual (Versão 2.0)**: Alternância dinâmica entre **Modo Lista** e **Modo Card** através de um botão dedicado na AppBar.
+- **Layout Inteligente**: Uso de `GridView` para cards e `ListView` para listas, garantindo organização automática.
+- **Persistência em SQLite**: Suas metas são salvas de forma segura em um banco de dados local (`goal.db`).
+- **Monitoramento em Tempo Real Otimizado**: O app utiliza multi-threading com um sistema de hashing ultra-rápido (0.5s) para atualizar a interface instantaneamente.
+- **Feedback Visual Dinâmico**: Estilização rica com riscado e mudança de cor ao concluir metas.
+- **Sistema de Alertas**: Validação de campos e tratamento de exceções com componentes personalizados.
 
-- Persistência em SQLite: Suas metas são salvas em um banco de dados local (goal.db).
+🛠️ Tecnologias Utilizadas
+- **Flet**: Framework moderno para interfaces ricas.
+- **SQLite**: Banco de dados leve e eficiente.
+- **Threading**: Processamento paralelo para monitoramento fluído.
 
-- Monitoramento em Tempo Real: O app utiliza multi-threading para monitorar o banco de dados e atualizar a interface automaticamente sem necessidade de recarregar.
+📂 Estrutura do Projeto
+- `main.py`: Interface principal, AppBar e navegação.
+- `logic.py`: Componentes dinâmicos (`ItemGoal`), lógica de visualização e monitor de banco.
+- `database.py`: Classe de manipulação do SQLite.
 
-- Feedback Visual de Conclusão: Ao marcar uma meta, o texto é riscado e sua cor alterada dinamicamente.
-
-- Sistema de Alertas: Tratamento de exceções para campos vazios com componentes personalizados.
-
-## 🛠️ Tecnologias Utilizadas
-- Flet: Framework para construção de interfaces (baseado em Flutter).
-
-- SQLite: Banco de dados relacional leve.
-
-- Threading: Para processamento paralelo do monitor de sincronia.
-
-## 📂 Estrutura do Projeto
-- main.py: Ponto de entrada do aplicativo e definição da interface principal.
-
-- logic.py: Contém a classe ItemGoal e toda a lógica de manipulação da UI e monitoramento.
-
-- database.py: Camada de persistência (CRUD) e conexão com o SQLite.
-
-## 🧠 O que eu aprendi neste estudo
-- Separação de responsabilidades (UI vs Lógica vs Banco de Dados).
-
-- Uso de global variables e hashing (str comparison) para evitar renderizações desnecessárias na tela.
-
-- Customização profunda de componentes Flet (Alerts, Buttons e Containers).
+🧠 O que eu aprendi neste estudo
+- **Arquitetura Escalável**: Separação clara entre UI, Lógica e Dados.
+- **Otimização de Performance**: Uso de comparações de estado para evitar re-renderizações custosas.
+- **UX Adaptativo**: Criação de layouts que se ajustam entre diferentes modos de visualização.
+- **Versionamento com Git**: Fluxo de trabalho com branches para desenvolvimento de novas versões (v2.0).
