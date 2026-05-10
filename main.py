@@ -1,6 +1,7 @@
 import flet as ft
 from logic import add_goal, close_alert, load_initial_data, start_monitor, load_tasks_view, add_task_action
 from database import Database
+from dashboard import create_dashboard_view
 
 db = Database()
 
@@ -89,32 +90,7 @@ def main(page: ft.Page):
                 ft.View(
                     route="/dashboard",
                     controls=[
-                        ft.Container(
-                            content=ft.Column([
-                                ft.Text("Visão Analítica", size=26, weight="bold"),
-                                ft.Text("Espaço estruturado para futuros gráficos de produtividade.", color="outline"),
-                                ft.Row([
-                                    # Card 1: Porcentagem de Metas
-                                    ft.Container(
-                                        content=ft.Column([ft.Icon(ft.Icons.PIE_CHART, size=35), ft.Text("Desempenho Global", weight="bold"), ft.Text("(Em Breve)", size=12)], alignment="center", horizontal_alignment="center"),
-                                        bgcolor="surfaceVariant", padding=30, border_radius=10, expand=True, border=ft.border.all(1, "outline")
-                                    ),
-                                    # Card 2: Metas por Mês
-                                    ft.Container(
-                                        content=ft.Column([ft.Icon(ft.Icons.BAR_CHART, size=35), ft.Text("Metas por Mês", weight="bold"), ft.Text("(Em Breve)", size=12)], alignment="center", horizontal_alignment="center"),
-                                        bgcolor="surfaceVariant", padding=30, border_radius=10, expand=True, border=ft.border.all(1, "outline")
-                                    ),
-                                ]),
-                                ft.Row([
-                                    # Card 3: Submetas Concluídas
-                                    ft.Container(
-                                        content=ft.Column([ft.Icon(ft.Icons.CHECKLIST, size=35), ft.Text("Submetas Concluídas", weight="bold"), ft.Text("(Em Breve)", size=12)], alignment="center", horizontal_alignment="center"),
-                                        bgcolor="surfaceVariant", padding=30, border_radius=10, expand=True, border=ft.border.all(1, "outline")
-                                    )
-                                ])
-                            ], expand=True, spacing=20),
-                            padding=20, expand=True
-                        )
+                        create_dashboard_view(page, db)
                     ],
                     appbar=ft.AppBar(
                         title=ft.Text("Dashboard"),

@@ -19,7 +19,7 @@ class ItemGoal(ft.Container):
             self.width = None
             self.height = None
             self.padding = 5
-            self.margin = ft.margin.only(bottom=5)
+            self.margin = ft.Margin.only(bottom=5)
             self.border_radius = 10
         else: # Grid / Card mode
             self.width = 200 # Aumentado um pouco para dar mais espaço
@@ -28,7 +28,7 @@ class ItemGoal(ft.Container):
             self.border_radius = 15
             
         self.bgcolor = "surfaceVariant"
-        self.border = ft.border.all(1, "outline")
+        self.border = ft.Border.all(1, "outline")
         self.on_click = lambda _: page.go(f"/tasks/{self.goal_id}")
         
         self.checkbox = ft.Checkbox(
@@ -79,7 +79,7 @@ class ItemGoal(ft.Container):
                         content=self.display_text, 
                         alignment=ft.Alignment(0, 0),
                         expand=True,
-                        padding=ft.padding.only(top=10)
+                        padding=ft.Padding.only(top=10)
                     )
                 ],
                 alignment="start", # Começa do topo
@@ -129,6 +129,38 @@ def add_goal(page, db, new_goal, meta_list, alert, current_view):
         page.update()
 
 
+def handle_drag_accept(e, page, db, meta_list, current_view):
+    src_control = page.get_control(e.src_id)
+    if not src_control:
+        return
+        
+    src_goal_id = src_control.data
+    dest_goal_id = e.control.data
+    
+    if src_goal_id == dest_goal_id:
+        return
+        
+    goals = db.load_goals()
+    goal_ids = [g[0] for g in goals]
+    
+    src_goal_id = int(src_goal_id)
+    dest_goal_id = int(dest_goal_id)
+    
+    if src_goal_id in goal_ids and dest_goal_id in goal_ids:
+        src_index = goal_ids.index(src_goal_id)
+        dest_index = goal_ids.index(dest_goal_id)
+        
+        goal_ids.pop(src_index)
+        goal_ids.insert(dest_index, src_goal_id)
+        
+        db.update_goal_positions(goal_ids)
+        
+        global last_check_hash
+        last_check_hash = str(db.load_goals())
+        
+        load_initial_data(db, meta_list, page, current_view)
+
+
 def load_initial_data(db, meta_list, page, current_view):
     # Limpamos o container principal
     meta_list.controls.clear()
@@ -156,7 +188,21 @@ def load_initial_data(db, meta_list, page, current_view):
                         status = g[2],
                         view_mode=current_view[0]
                         )
-        view_container.controls.append(card)
+        
+        draggable_card = ft.Draggable(
+            group="goals",
+            content=card,
+            data=str(g[0]) # ID da meta em string para recuperar no drop
+        )
+
+        drag_target = ft.DragTarget(
+            group="goals",
+            content=draggable_card,
+            data=str(g[0]), # Destino do drop
+            on_accept=lambda e: handle_drag_accept(e, page, db, meta_list, current_view)
+        )
+
+        view_container.controls.append(drag_target)
     
     meta_list.controls.append(view_container)
     page.update()
@@ -237,7 +283,7 @@ class TaskItem(ft.Container):
         self.padding = 10
         self.bgcolor = "surfaceVariant"
         self.border_radius = 10
-        self.border = ft.border.all(1, "outline")
+        self.border = ft.Border.all(1, "outline")
         
         self.checkbox = ft.Checkbox(
             value=True if status == 1 else False,
