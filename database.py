@@ -8,6 +8,15 @@ class Database:
         self.create_table()
 
     def create_table(self):
+        # Tabela de Categorias (deve ser criada antes de 'goal' por causa da FK)
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS categories(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            color TEXT DEFAULT 'blue'
+        )
+        """)
+
         # Tabela de Metas
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS goal(
@@ -16,9 +25,17 @@ class Database:
             status INTEGER DEFAULT 0
         )
         """)
+
         # MIGRATION: Adiciona coluna de posição se o banco já existir
         try:
             self.cursor.execute("ALTER TABLE goal ADD COLUMN position INTEGER DEFAULT 0")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
+        # MIGRATION: Adiciona coluna de categoria se o banco já existir
+        try:
+            self.cursor.execute("ALTER TABLE goal ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL")
             self.conn.commit()
         except sqlite3.OperationalError:
             pass
@@ -33,17 +50,32 @@ class Database:
             FOREIGN KEY(goal_id) REFERENCES goal(id) ON DELETE CASCADE
         )
         """)
+        # Tabela de configurações genéricas (chave/valor)
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings(
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """)
         self.conn.commit()
 
-    def add_goal(self, title):
-        self.cursor.execute("INSERT INTO goal (title) VALUES (?)", (title,))
+    # --- MÉTODOS PARA GOALS ---
+
+    def add_goal(self, title, category_id=None):
+        self.cursor.execute("INSERT INTO goal (title, category_id) VALUES (?, ?)", (title, category_id))
         self.conn.commit()
         return self.cursor.lastrowid
 
     def load_goals(self):
-        cursor = self.conn.execute("SELECT * FROM goal ORDER BY position ASC, id ASC")
-        data = cursor.fetchall()
-        return data
+        """Retorna: (goal.id, goal.title, goal.status, goal.position, cat.id, cat.name, cat.color)"""
+        cursor = self.conn.execute("""
+            SELECT goal.id, goal.title, goal.status, goal.position,
+                   categories.id, categories.name, categories.color
+            FROM goal
+            LEFT JOIN categories ON goal.category_id = categories.id
+            ORDER BY goal.position ASC, goal.id ASC
+        """)
+        return cursor.fetchall()
 
     def delete_db_goal(self, goal_id):
         self.cursor.execute("DELETE FROM goal WHERE id = ?", (goal_id,))
@@ -83,49 +115,85 @@ class Database:
         self.cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
         self.conn.commit()
 
+    # --- MÉTODOS PARA CATEGORIES ---
 
-    # Metodo para o Dashboard
+    def add_category(self, name, color="blue"):
+        self.cursor.execute("INSERT INTO categories (name, color) VALUES (?, ?)", (name, color))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def load_categories(self):
+        """Retorna: (id, name, color)"""
+        cursor = self.conn.execute("SELECT id, name, color FROM categories ORDER BY name ASC")
+        return cursor.fetchall()
+
+    def delete_category(self, cat_id):
+        # ON DELETE SET NULL garante que metas vinculadas ficam sem categoria
+        self.cursor.execute("DELETE FROM categories WHERE id = ?", (cat_id,))
+        self.conn.commit()
+
+    # --- MÉTODOS PARA O DASHBOARD ---
+
     def get_goals_kpi(self):
         cursor = self.conn.execute("SELECT COUNT(id) FROM goal")
         total_goals = cursor.fetchone()[0]
-
         cursor = self.conn.execute("SELECT COUNT(id) FROM goal WHERE status = 1")
         completed_goals = cursor.fetchone()[0]
-
-        pending_goals = total_goals - completed_goals
-
-        return{
-            "total":total_goals,
-            "concluidas":completed_goals,
-            "pendentes":pending_goals
+        return {
+            "total": total_goals,
+            "concluidas": completed_goals,
+            "pendentes": total_goals - completed_goals
         }
-    
-    def get_tasks_kpi(self):
 
+    def get_tasks_kpi(self):
         cursor = self.conn.execute("SELECT COUNT(id) FROM tasks")
         total_tasks = cursor.fetchone()[0]
         cursor = self.conn.execute("SELECT COUNT(id) FROM tasks WHERE status = 1")
         completed_tasks = cursor.fetchone()[0]
-
-        return{
-            "total":total_tasks,
+        return {
+            "total": total_tasks,
             "concluidas": completed_tasks,
-            "pendentes": total_tasks - completed_tasks 
+            "pendentes": total_tasks - completed_tasks
         }
 
     def get_tasks_per_goal(self):
-        cursor = self.conn.execute(""" SELECT goal.title, COUNT(tasks.id)
-        FROM goal 
-        LEFT JOIN tasks ON goal.id = tasks.goal_id
-        GROUP BY goal.id
-        ORDER BY COUNT(tasks.id) DESC""")
-
+        cursor = self.conn.execute("""
+            SELECT goal.title, COUNT(tasks.id)
+            FROM goal
+            LEFT JOIN tasks ON goal.id = tasks.goal_id
+            GROUP BY goal.id
+            ORDER BY COUNT(tasks.id) DESC
+        """)
         return cursor.fetchall()
 
+    def get_kpi_per_category(self):
+        """Retorna: (cat.id, cat.name, cat.color, total_goals, completed_goals) por categoria."""
+        cursor = self.conn.execute("""
+            SELECT
+                categories.id,
+                categories.name,
+                categories.color,
+                COUNT(goal.id) AS total_goals,
+                SUM(CASE WHEN goal.status = 1 THEN 1 ELSE 0 END) AS completed_goals
+            FROM categories
+            LEFT JOIN goal ON goal.category_id = categories.id
+            GROUP BY categories.id
+            ORDER BY categories.name ASC
+        """)
+        return cursor.fetchall()
 
-    
+    # --- MÉTODOS DE CONFIGURAÇÕES ---
 
+    def get_setting(self, key: str, default: str = "") -> str:
+        """Lê uma configuração pelo nome da chave. Retorna default se não existir."""
+        cursor = self.conn.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        result = cursor.fetchone()
+        return result[0] if result else default
 
-        
-        
-
+    def set_setting(self, key: str, value: str):
+        """Salva (ou atualiza) uma configuração pelo nome da chave."""
+        self.cursor.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+        self.conn.commit()
