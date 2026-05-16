@@ -3,25 +3,31 @@
 Um gerenciador de metas desenvolvido com Python e Flet, focado em uma experiência visual limpa e sincronização de dados eficiente. Este projeto faz parte dos meus estudos sobre interfaces ricas e persistência de dados local.
 
 🚀 Funcionalidades
-- **Visualização Dual (Versão 2.0)**: Alternância dinâmica entre **Modo Lista** e **Modo Card** através de um botão dedicado na AppBar.
-- **Layout Inteligente**: Uso de `GridView` para cards e `ListView` para listas, garantindo organização automática.
-- **Persistência em SQLite**: Suas metas são salvas de forma segura em um banco de dados local (`goal.db`).
-- **Monitoramento em Tempo Real Otimizado**: O app utiliza multi-threading com um sistema de hashing ultra-rápido (0.5s) para atualizar a interface instantaneamente.
-- **Feedback Visual Dinâmico**: Estilização rica com riscado e mudança de cor ao concluir metas.
-- **Sistema de Alertas**: Validação de campos e tratamento de exceções com componentes personalizados.
+- **Visualização Dual (v2.0)**: Alternância dinâmica entre **Modo Lista** e **Modo Card** com `GridView` e `ListView`.
+- **Drag & Drop**: Reordenação de metas por arrastar e soltar com persistência no banco.
+- **Sistema de Categorias (v2.2)**: Criação de categorias com cores personalizadas, atribuição opcional às metas e badge visual nos cards.
+- **Dashboard Analítico em Tempo Real**: KPIs globais (metas e tarefas), gráficos de rosca e barras, e cards de desempenho por categoria atualizados automaticamente.
+- **Sub-tarefas por Meta**: Adição e conclusão de tarefas vinculadas a cada meta.
+- **Persistência em SQLite**: Metas, tarefas, categorias e preferências salvas localmente em `goal.db`.
+- **Monitoramento Assíncrono**: Multi-threading com hashing (0.5s) para sincronização sem re-renderizações desnecessárias.
+- **Preferências Persistidas**: Tema claro/escuro salvo entre sessões.
+- **Feedback Visual Dinâmico**: Riscado, mudança de cor e badges ao concluir metas.
 
 🛠️ Tecnologias Utilizadas
-- **Flet**: Framework moderno para interfaces ricas.
+- **Flet**: Framework moderno para interfaces ricas cross-platform.
 - **SQLite**: Banco de dados leve e eficiente.
+- **flet-charts**: Biblioteca de gráficos (PieChart, BarChart).
 - **Threading**: Processamento paralelo para monitoramento fluído.
 
 📂 Estrutura do Projeto
-- `main.py`: Interface principal, AppBar e navegação.
-- `logic.py`: Componentes dinâmicos (`ItemGoal`), lógica de visualização e monitor de banco.
-- `database.py`: Classe de manipulação do SQLite.
+- `main.py`: Entry point, roteamento e setup de Views.
+- `logic.py`: Componentes dinâmicos (`ItemGoal`, `TaskItem`, `CategoryItem`), lógica de negócio e monitor assíncrono.
+- `database.py`: Classe de manipulação do SQLite (goals, tasks, categories, settings).
+- `dashboard.py`: Dashboard analítico stateful com KPIs e gráficos.
 
 🧠 O que eu aprendi neste estudo
 - **Arquitetura Escalável**: Separação clara entre UI, Lógica e Dados.
-- **Otimização de Performance**: Uso de comparações de estado para evitar re-renderizações custosas.
-- **UX Adaptativo**: Criação de layouts que se ajustam entre diferentes modos de visualização.
-- **Versionamento com Git**: Fluxo de trabalho com branches para desenvolvimento de novas versões (v2.0).
+- **Otimização de Performance**: Sistema de hash + threading lock para evitar race conditions e re-renderizações duplicadas.
+- **UX Adaptativo**: Layouts que se ajustam entre diferentes modos de visualização.
+- **Dashboards em Tempo Real**: Componentes stateful monitorados por thread assíncrona.
+- **Versionamento com Git**: Fluxo de trabalho com branches e Conventional Commits.
