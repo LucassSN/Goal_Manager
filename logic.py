@@ -717,10 +717,7 @@ def start_monitor(page, db, current_view):
                     cats_data = db.load_categories()
                     current_hash = f"dashboard_{str(goals_data)}_{str(cats_data)}"
                     if current_hash != last_check_hash:
-                        # Usa o builder registrado no page.data pelo main.py
-                        builder = None
-                        if hasattr(page, 'data') and isinstance(page.data, dict):
-                            builder = page.data.get("dashboard_builder")
+                        builder = getattr(page, '_dashboard_builder', None)
                         if builder is not None:
                             builder.refresh()
                         last_check_hash = current_hash

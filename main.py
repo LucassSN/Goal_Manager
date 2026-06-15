@@ -29,8 +29,8 @@ def main(page: ft.Page):
 
     current_view = ["list"]
 
-    # Instância singleton do Dashboard Builder — preserva estado entre navegações
-    dashboard_builder_instance = [None]
+    # Estado persistente do modo de edição do Dashboard entre navegações
+    dashboard_edit_mode = [False]
 
     def toggle_theme(e):
         page.theme_mode = ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
@@ -156,14 +156,12 @@ def main(page: ft.Page):
         # ----------------------------------------------------------------
         elif page.route == "/dashboard":
             builder, builder_container = create_builder_view(
-                page, db, builder=dashboard_builder_instance[0]
+                page, db,
+                initial_edit_mode=dashboard_edit_mode[0],
+                on_edit_mode_change=lambda mode: dashboard_edit_mode.__setitem__(0, mode),
             )
-            dashboard_builder_instance[0] = builder
-            # Armazena no page para o monitor poder chamar refresh()
-            page.data = page.data if hasattr(page, 'data') and isinstance(page.data, dict) else {}
-            if not isinstance(page.data, dict):
-                page.data = {}
-            page.data["dashboard_builder"] = builder
+            # Referência para o monitor assíncrono em logic.py
+            page._dashboard_builder = builder
 
             page.views.clear()
             page.views.append(

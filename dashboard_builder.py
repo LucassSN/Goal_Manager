@@ -565,13 +565,14 @@ class DashboardBuilderView:
     filtros globais e persistência.
     """
 
-    def __init__(self, page: ft.Page, db, on_dashboard_change=None):
+    def __init__(self, page: ft.Page, db, on_dashboard_change=None, initial_edit_mode=False):
         self.page = page
         self.db   = db
         self.on_dashboard_change = on_dashboard_change
+        self.on_edit_mode_change = None  # callback: chamado com (bool) ao trocar modo
 
         # Estado
-        self._edit_mode      = False
+        self._edit_mode      = initial_edit_mode
         self._dashboard_id   = db.get_default_dashboard_id()
         self._widgets: list  = []   # lista de dicts: {uid, type, span}
         self._filters: dict  = {"category_id": None, "status": "all"}
@@ -607,6 +608,9 @@ class DashboardBuilderView:
     # ── Modo Edição ───────────────────────────────────────────────────────
     def toggle_edit_mode(self, e=None):
         self._edit_mode = not self._edit_mode
+        # Notifica o main.py para persistir o estado entre navegações
+        if self.on_edit_mode_change:
+            self.on_edit_mode_change(self._edit_mode)
         if self._edit_btn:
             self._edit_btn.icon  = ft.Icons.VISIBILITY if self._edit_mode else ft.Icons.EDIT
             self._edit_btn.text  = "Visualizar" if self._edit_mode else "Editar Layout"
@@ -1075,15 +1079,17 @@ class DashboardBuilderView:
 # ─────────────────────────────────────────────────────────────────────────────
 # FACTORY — chamada pelo main.py
 # ─────────────────────────────────────────────────────────────────────────────
-def create_builder_view(page: ft.Page, db, builder: DashboardBuilderView = None) -> tuple:
-    """Cria (ou reutiliza) o DashboardBuilderView e retorna (builder, container).
+def create_builder_view(
+    page: ft.Page,
+    db,
+    initial_edit_mode: bool = False,
+    on_edit_mode_change=None,
+) -> tuple:
+    """Cria um DashboardBuilderView NOVO e retorna (builder, container).
     
-    Quando `builder` é fornecido, reutiliza a instância existente (preservando
-    o estado de edição) e apenas reconstrói a árvore de controles.
+    Cada navegação cria controles Flet frescos (evita bug de re-parenting).
+    O estado de edição é injetado de fora via `initial_edit_mode`.
     """
-    if builder is None:
-        builder = DashboardBuilderView(page, db)
-    else:
-        # Recarrega dados do banco sem resetar _edit_mode
-        builder._load_dashboard()
+    builder = DashboardBuilderView(page, db, initial_edit_mode=initial_edit_mode)
+    builder.on_edit_mode_change = on_edit_mode_change
     return builder, builder.build()
