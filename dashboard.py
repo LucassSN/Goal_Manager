@@ -41,23 +41,28 @@ def build_dashboard_content(column: ft.Column, page: ft.Page, db):
     kpis_row = ft.Row([
         kpi_card("Progresso das Metas",
                  f"{goals_kpi['concluidas']} / {goals_kpi['total']}",
-                 ft.Icons.FLAG, "blue"),
+                 ft.Icons.FLAG, "#5B8FF9"),
         kpi_card("Progresso das Tarefas",
                  f"{tasks_kpi['concluidas']} / {tasks_kpi['total']}",
-                 ft.Icons.CHECKLIST, "green"),
+                 ft.Icons.CHECKLIST, "#5AD8A6"),
     ], spacing=16)
 
     # -------------------------------------------------------------------------
     # 3. Gráfico de Rosca — Status das Metas
     # -------------------------------------------------------------------------
+    # Cores pastéis premium — harmoniosas com dark mode
+    _COLOR_DONE    = "#5AD8A6"   # verde-menta suave
+    _COLOR_PENDING = "#FF7875"   # vermelho-salmão suave
+    _COLOR_BAR     = "#5B8FF9"   # azul-índigo suave
+
     if goals_kpi["total"] > 0:
         pie_sections = []
         if goals_kpi["concluidas"] > 0:
             pie_sections.append(fch.PieChartSection(
-                value=goals_kpi["concluidas"], color="green", radius=40, title=""))
+                value=goals_kpi["concluidas"], color=_COLOR_DONE, radius=40, title=""))
         if goals_kpi["pendentes"] > 0:
             pie_sections.append(fch.PieChartSection(
-                value=goals_kpi["pendentes"], color="red", radius=40, title=""))
+                value=goals_kpi["pendentes"], color=_COLOR_PENDING, radius=40, title=""))
 
         pie_content = fch.PieChart(
             sections=pie_sections,
@@ -78,9 +83,9 @@ def build_dashboard_content(column: ft.Column, page: ft.Page, db):
                 ft.Container(content=pie_content, height=180,
                              alignment=ft.Alignment(0, 0)),
                 ft.Row([
-                    ft.Container(width=12, height=12, border_radius=6, bgcolor="green"),
+                    ft.Container(width=12, height=12, border_radius=6, bgcolor=_COLOR_DONE),
                     ft.Text("Concluídas", size=11, color="grey"),
-                    ft.Container(width=12, height=12, border_radius=6, bgcolor="red"),
+                    ft.Container(width=12, height=12, border_radius=6, bgcolor=_COLOR_PENDING),
                     ft.Text("Pendentes", size=11, color="grey"),
                 ], spacing=6),
             ], spacing=8, horizontal_alignment="center"),
@@ -103,7 +108,7 @@ def build_dashboard_content(column: ft.Column, page: ft.Page, db):
             fch.BarChartGroup(
                 x=index,
                 rods=[fch.BarChartRod(
-                    from_y=0, to_y=count, color="blue",
+                    from_y=0, to_y=count, color=_COLOR_BAR,
                     width=22, tooltip=f"{title_txt}: {count} tarefas", border_radius=4
                 )],
             )
@@ -207,11 +212,11 @@ def build_dashboard_content(column: ft.Column, page: ft.Page, db):
                                     ft.Text("Total",        size=10, color="grey"),
                                 ], horizontal_alignment="center", spacing=2),
                                 ft.Column([
-                                    ft.Text(str(completed), size=20, weight="bold", color="green"),
+                                    ft.Text(str(completed), size=20, weight="bold", color=_COLOR_DONE),
                                     ft.Text("Concluídas",   size=10, color="grey"),
                                 ], horizontal_alignment="center", spacing=2),
                                 ft.Column([
-                                    ft.Text(str(pending),   size=20, weight="bold", color="red"),
+                                    ft.Text(str(pending),   size=20, weight="bold", color=_COLOR_PENDING),
                                     ft.Text("Pendentes",    size=10, color="grey"),
                                 ], horizontal_alignment="center", spacing=2),
                             ], alignment="spaceAround"),
