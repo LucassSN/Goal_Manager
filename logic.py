@@ -711,22 +711,19 @@ def start_monitor(page, db, current_view):
                             load_tasks_view(page, db, target_task_list, goal_id)
                             last_check_hash = current_hash
 
-                # ---- Monitora DASHBOARD (/dashboard) ----
+                # ---- Monitora DASHBOARD (/dashboard): Builder ----
                 elif current_route == "/dashboard":
                     goals_data = db.load_goals()
                     cats_data = db.load_categories()
                     current_hash = f"dashboard_{str(goals_data)}_{str(cats_data)}"
                     if current_hash != last_check_hash:
-                        target_dash = None
-                        for view in page.views:
-                            if view.route == "/dashboard":
-                                target_dash = _find_control_by_key(view.controls, "dashboard_content")
-                                if target_dash:
-                                    break
-                        if target_dash:
-                            from dashboard import build_dashboard_content
-                            build_dashboard_content(target_dash, page, db)
-                            last_check_hash = current_hash
+                        # Usa o builder registrado no page.data pelo main.py
+                        builder = None
+                        if hasattr(page, 'data') and isinstance(page.data, dict):
+                            builder = page.data.get("dashboard_builder")
+                        if builder is not None:
+                            builder.refresh()
+                        last_check_hash = current_hash
 
                 time.sleep(0.5)
             except Exception as ex:

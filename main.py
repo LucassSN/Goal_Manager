@@ -29,6 +29,9 @@ def main(page: ft.Page):
 
     current_view = ["list"]
 
+    # Instância singleton do Dashboard Builder — preserva estado entre navegações
+    dashboard_builder_instance = [None]
+
     def toggle_theme(e):
         page.theme_mode = ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
         # Persiste a escolha no banco de dados
@@ -152,6 +155,16 @@ def main(page: ft.Page):
         # VIEW DO DASHBOARD (Builder customizável)
         # ----------------------------------------------------------------
         elif page.route == "/dashboard":
+            builder, builder_container = create_builder_view(
+                page, db, builder=dashboard_builder_instance[0]
+            )
+            dashboard_builder_instance[0] = builder
+            # Armazena no page para o monitor poder chamar refresh()
+            page.data = page.data if hasattr(page, 'data') and isinstance(page.data, dict) else {}
+            if not isinstance(page.data, dict):
+                page.data = {}
+            page.data["dashboard_builder"] = builder
+
             page.views.clear()
             page.views.append(
                 ft.View(
@@ -160,7 +173,7 @@ def main(page: ft.Page):
                         ft.Row([
                             Sidebar(page, "/dashboard", toggle_theme),
                             ft.VerticalDivider(width=1),
-                            create_builder_view(page, db)
+                            builder_container
                         ], expand=True)
                     ]
                 )

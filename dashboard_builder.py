@@ -599,6 +599,11 @@ class DashboardBuilderView:
     def _save_layout(self):
         self.db.save_dashboard_layout(self._dashboard_id, self._widgets, self._filters)
 
+    def refresh(self):
+        """Recarrega dados do banco e reconstrói o grid preservando o estado de edição."""
+        self._load_dashboard()
+        self._rebuild_grid()
+
     # ── Modo Edição ───────────────────────────────────────────────────────
     def toggle_edit_mode(self, e=None):
         self._edit_mode = not self._edit_mode
@@ -980,11 +985,16 @@ class DashboardBuilderView:
         )
 
         # ── Botão Editar Layout ────────────────────────────────────────────
+        # Reflete o estado atual de _edit_mode (preserva entre reconstruções)
         self._edit_btn = ft.ElevatedButton(
-            "Editar Layout",
-            icon=ft.Icons.EDIT,
+            "Visualizar" if self._edit_mode else "Editar Layout",
+            icon=ft.Icons.VISIBILITY if self._edit_mode else ft.Icons.EDIT,
             on_click=self.toggle_edit_mode,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=10),
+                bgcolor={"":  "primary" if self._edit_mode else None},
+                color={"":  "onPrimary" if self._edit_mode else None},
+            ),
         )
 
         # ── Barra de ações do dashboard ────────────────────────────────────
@@ -1065,7 +1075,15 @@ class DashboardBuilderView:
 # ─────────────────────────────────────────────────────────────────────────────
 # FACTORY — chamada pelo main.py
 # ─────────────────────────────────────────────────────────────────────────────
-def create_builder_view(page: ft.Page, db) -> ft.Control:
-    """Cria e retorna a view completa do Dashboard Builder."""
-    builder = DashboardBuilderView(page, db)
-    return builder.build()
+def create_builder_view(page: ft.Page, db, builder: DashboardBuilderView = None) -> tuple:
+    """Cria (ou reutiliza) o DashboardBuilderView e retorna (builder, container).
+    
+    Quando `builder` é fornecido, reutiliza a instância existente (preservando
+    o estado de edição) e apenas reconstrói a árvore de controles.
+    """
+    if builder is None:
+        builder = DashboardBuilderView(page, db)
+    else:
+        # Recarrega dados do banco sem resetar _edit_mode
+        builder._load_dashboard()
+    return builder, builder.build()
